@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Povo Mappa · Occupazione aule</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">P</span>
+      <div>
+        <h1>Povo Mappa</h1>
+        <p>Polo Ferrari · UniTrento · occupazione aule in tempo reale</p>
+      </div>
+    </div>
+
+    <nav class="floors" id="floor-tabs" aria-label="Piano"></nav>
+
+    <div class="controls">
+      <label class="ctrl">
+        <span>Giorno</span>
+        <input type="date" id="date-input" />
+      </label>
+      <label class="ctrl ctrl-time">
+        <span>Ora <b id="time-label">--:--</b></span>
+        <input type="range" id="time-input" min="450" max="1410" step="15" />
+      </label>
+      <button id="now-btn" class="btn live" title="Torna a adesso">● Adesso</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-wrap">
+      <div class="map-head">
+        <h2 id="floor-title"></h2>
+        <span id="floor-hint" class="muted"></span>
+        <span id="status-msg" class="muted"></span>
+      </div>
+      <div id="map" class="map"></div>
+      <div class="legend">
+        <span><i class="sw busy"></i> Occupata</span>
+        <span><i class="sw soon"></i> Libera, occupata tra &lt;30 min</span>
+        <span><i class="sw free"></i> Libera</span>
+        <span><i class="sw unavailable"></i> Indisponibile</span>
+        <span><i class="sw nodata"></i> Nessun dato</span>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="side-head">
+        <input type="search" id="search" placeholder="Cerca aula (es. A105, B107)…" />
+      </div>
+      <div id="detail" class="detail hidden"></div>
+      <ul id="room-list" class="room-list"></ul>
+    </aside>
+  </main>
+
+  <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+
+  <footer class="foot">
+    Dati orari: <a href="https://easyacademy.unitn.it/AgendaStudentiUnitn/index.php?view=rooms&include=rooms&_lang=it" target="_blank" rel="noopener">EasyAcademy UniTrento</a>
+    · <span id="last-update"></span> · Mappe non ufficiali, schematiche.
+  </footer>
+
+  <script src="maps.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
