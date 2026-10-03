@@ -6,6 +6,7 @@
 
   const $ = (sel) => document.querySelector(sel);
   const el = {
+    topbar: $('.topbar'),
     tabs: $('#floor-tabs'),
     date: $('#date-input'),
     time: $('#time-input'),
@@ -21,6 +22,17 @@
     tooltip: $('#tooltip'),
     lastUpdate: $('#last-update'),
   };
+
+  const ctrlToggle = document.createElement('button');
+  ctrlToggle.id = 'ctrl-toggle';
+  ctrlToggle.className = 'btn ctrl-toggle';
+  ctrlToggle.setAttribute('aria-expanded', 'false');
+  ctrlToggle.textContent = '🕒 Ora';
+  el.topbar.insertBefore(ctrlToggle, el.tabs);
+  ctrlToggle.addEventListener('click', () => {
+    const open = el.topbar.classList.toggle('show-controls');
+    ctrlToggle.setAttribute('aria-expanded', String(open));
+  });
 
   const state = {
     floorId: FLOORS[0].id,
@@ -104,7 +116,9 @@
   function textIn(r, label, sub, badge) {
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     const small = r.small || Math.min(r.w, r.h) < 40;
-    const size = small ? 12 : Math.min(22, Math.max(13, Math.min(r.w, r.h) / 3));
+    let size = small ? 13 : Math.min(24, Math.max(15, Math.min(r.w, r.h) / 2.8));
+    const avail = (r.vertical ? r.h : r.w) - 8;
+    size = Math.max(10, Math.min(size, avail / (String(label).length * 0.62)));
     if (r.vertical) {
       return `<text x="${cx}" y="${cy}" font-size="${size}" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 ${cx} ${cy})">${esc(label)}</text>`;
     }
@@ -135,9 +149,9 @@
     (f.corridors || []).forEach((c) => parts.push(rect(c, 'corridor')));
     (f.areas || []).forEach((a) => {
       const cx = a.x + a.w / 2, cy = a.y + a.h / 2;
-      const size = a.small ? 9 : 13;
+      const size = a.small ? 10 : 14;
       const t = a.vertical
-        ? `<text x="${cx}" y="${cy}" font-size="11" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 ${cx} ${cy})">${esc(a.label)}</text>`
+        ? `<text x="${cx}" y="${cy}" font-size="12" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 ${cx} ${cy})">${esc(a.label)}</text>`
         : `<text x="${cx}" y="${cy}" font-size="${size}" text-anchor="middle" dominant-baseline="central">${esc(a.label)}</text>`;
       parts.push(`<g class="area ${a.kind || ''}">${rect(a, '')}${t}</g>`);
     });
@@ -151,6 +165,8 @@
     (f.arrows || []).forEach((a) => parts.push(`<line class="arrow" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}"/>`));
     parts.push('</svg>');
     el.map.innerHTML = parts.join('');
+    const vbw = Number(f.viewBox.split(' ')[2]) || 1000;
+    el.map.style.setProperty('--mapw', `${vbw / 10}%`);
     el.title.textContent = `${f.building} · ${f.name}`;
     el.hint.textContent = f.hint;
   }
@@ -190,9 +206,10 @@
     return f.rooms.find((r) => (code ? r.code === code : r.label === label));
   }
 
+  const noHover = window.matchMedia('(hover: none)');
   el.map.addEventListener('mouseover', (e) => {
     const g = e.target.closest('.room');
-    if (!g) return;
+    if (!g || noHover.matches) return;
     const room = findRoom(g.dataset.code, g.dataset.label);
     if (!room) return;
     el.tooltip.innerHTML = tooltipHtml(room);
@@ -304,6 +321,7 @@
   function renderTime() {
     el.time.value = clampSlider(state.minutes);
     el.timeLabel.textContent = min2hm(state.minutes) + (state.live ? ' (adesso)' : '');
+    ctrlToggle.textContent = `🕒 ${min2hm(state.minutes)}${state.live ? '' : ' ·'}`;
   }
 
   el.time.addEventListener('input', () => {
