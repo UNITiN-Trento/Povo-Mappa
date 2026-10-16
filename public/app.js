@@ -67,7 +67,7 @@
       const res = await fetch(`/api/rooms?date=${date}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || res.statusText);
-      if (state.date === date) state.data = json;
+      if (state.date === date) { state.data = json; state.fetchedAt = Date.now(); }
     } catch (e) {
       state.error = e.message;
     } finally {
@@ -141,10 +141,10 @@
 
   function renderMap() {
     const f = currentFloor();
-    const rect = (r, cls) => `<rect class="${cls}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="2"/>`;
+    const rect = (r, cls, rx = 2) => `<rect class="${cls}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${rx}"/>`;
     const parts = [];
     parts.push(`<svg viewBox="${f.viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mappa ${f.building} ${f.name}">`);
-    parts.push('<defs><marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1b1d22"/></marker></defs>');
+    parts.push('<defs><marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#fafafa"/></marker></defs>');
     f.outline.forEach((o) => parts.push(rect(o, 'outline')));
     (f.corridors || []).forEach((c) => parts.push(rect(c, 'corridor')));
     (f.areas || []).forEach((a) => {
@@ -159,7 +159,7 @@
       const st = statusOf(r.code);
       const cls = ['room', r.kind === 'dark' ? 'dark' : st.status, state.selected === r.code ? 'selected' : ''].join(' ');
       const badge = r.kind === 'open' || r.kind === 'study' ? '' : badgeFor(st);
-      parts.push(`<g class="${cls}" data-code="${esc(r.code || '')}" data-label="${esc(r.label)}" tabindex="0">${rect(r, '')}${textIn(r, r.label, r.sub, badge)}</g>`);
+      parts.push(`<g class="${cls}" data-code="${esc(r.code || '')}" data-label="${esc(r.label)}" tabindex="0">${rect(r, '', 4)}${textIn(r, r.label, r.sub, badge)}</g>`);
     });
     (f.texts || []).forEach((t) => parts.push(`<text class="free-text" x="${t.x}" y="${t.y}" font-size="${t.size}" font-weight="${t.weight || 400}" text-anchor="middle">${esc(t.text)}</text>`));
     (f.arrows || []).forEach((a) => parts.push(`<line class="arrow" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}"/>`));
@@ -178,15 +178,15 @@
     const pill = `<span class="pill ${st.status}">${STATUS_LABEL[st.status]}</span>`;
     let body = '';
     if (st.now) {
-      body += `<div class="row"><div class="k">${st.now.type} in corso</div><b>${esc(st.now.name)}</b><br>${st.now.from} – ${st.now.to}${st.now.teachers.length ? `<br><span class="k">${esc(st.now.teachers.join(', '))}</span>` : ''}</div>`;
+      body += `<div class="row"><div class="k">${esc(st.now.type)} in corso</div><b>${esc(st.now.name)}</b><br>${esc(st.now.from)} – ${esc(st.now.to)}${st.now.teachers.length ? `<br><span class="k">${esc(st.now.teachers.join(', '))}</span>` : ''}</div>`;
     }
     if (st.next) {
-      body += `<div class="row"><div class="k">Prossimo</div>${esc(st.next.name)} · ${st.next.from} – ${st.next.to}</div>`;
+      body += `<div class="row"><div class="k">Prossimo</div>${esc(st.next.name)} · ${esc(st.next.from)} – ${esc(st.next.to)}</div>`;
     } else if (room.code && state.data && !st.now) {
       body += `<div class="row">Nessun altro evento oggi</div>`;
     }
     if (!room.code) body += `<div class="row">Spazio non gestito su EasyAcademy</div>`;
-    const cap = meta.capacity ? ` · ${meta.capacity} posti` : '';
+    const cap = meta.capacity ? ` · ${esc(meta.capacity)} posti` : '';
     return `<h4>${esc(meta.name)} ${pill}</h4><div class="k">${esc(room.sub || '')}${cap}</div>${body}<div class="hintline">Clic per il programma completo</div>`;
   }
 
@@ -244,6 +244,12 @@
     renderMap();
     renderList();
     renderDetail();
+    if (key && window.matchMedia('(max-width: 700px)').matches) {
+      requestAnimationFrame(() => {
+        const wrap = el.map.closest('.map-wrap');
+        if (wrap.getBoundingClientRect().top > 0) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   }
 
   function renderDetail() {
@@ -254,13 +260,13 @@
     const items = st.events.length
       ? st.events.map((ev) => {
         const cls = ev === st.now ? 'now' : hm2min(ev.to) <= state.minutes ? 'past' : '';
-        return `<li class="${cls}"><span class="t">${ev.from} – ${ev.to}</span><span><span class="n">${esc(ev.name)}</span><br><span class="m">${esc(ev.type)}${ev.teachers.length ? ' · ' + esc(ev.teachers.join(', ')) : ''}</span></span></li>`;
+        return `<li class="${cls}"><span class="t">${esc(ev.from)} – ${esc(ev.to)}</span><span><span class="n">${esc(ev.name)}</span><br><span class="m">${esc(ev.type)}${ev.teachers.length ? ' · ' + esc(ev.teachers.join(', ')) : ''}</span></span></li>`;
       }).join('')
       : `<li><span class="t">—</span><span class="m">${room.code ? 'Nessun evento in questa data' : 'Spazio non gestito su EasyAcademy'}</span></li>`;
     el.detail.innerHTML = `
       <button class="close" aria-label="Chiudi" id="detail-close">×</button>
       <h3>${esc(meta.name)} <span class="pill ${st.status}">${STATUS_LABEL[st.status]}</span></h3>
-      <div class="cap">${esc(room.floor.building)} · ${esc(room.floor.name)}${meta.capacity ? ` · ${meta.capacity} posti` : ''}${room.code ? ` · <code>${esc(room.code)}</code>` : ''}</div>
+      <div class="cap">${esc(room.floor.building)} · ${esc(room.floor.name)}${meta.capacity ? ` · ${esc(meta.capacity)} posti` : ''}${room.code ? ` · <code>${esc(room.code)}</code>` : ''}</div>
       <ul class="events">${items}</ul>`;
     el.detail.classList.remove('hidden');
     $('#detail-close').onclick = () => select(null);
@@ -279,7 +285,7 @@
       return `<li data-key="${esc(key)}" data-floor="${r.floor.id}" class="${state.selected === key ? 'selected' : ''}">
         <span class="dot ${st.status}" title="${STATUS_LABEL[st.status]}"></span>
         <span><span class="name">${esc(r.label)}</span>${q ? `<span class="floor-tag">${esc(r.floor.building)} · ${esc(r.floor.name)}</span>` : ''}<br><span class="info">${esc(shortInfo(st))}</span></span>
-        <span class="when">${when ? (st.now ? '→ ' : 'dalle ') + when : ''}</span>
+        <span class="when">${when ? (st.now ? '→ ' : 'dalle ') + esc(when) : ''}</span>
       </li>`;
     }).join('') || '<li><span></span><span class="info">Nessuna aula trovata</span></li>';
   }
@@ -321,7 +327,8 @@
   function renderTime() {
     el.time.value = clampSlider(state.minutes);
     el.timeLabel.textContent = min2hm(state.minutes) + (state.live ? ' (adesso)' : '');
-    ctrlToggle.textContent = `🕒 ${min2hm(state.minutes)}${state.live ? '' : ' ·'}`;
+    const [, m, d] = (state.date || '').split('-').map(Number);
+    ctrlToggle.textContent = `🕒 ${d ? `${d}/${m} ` : ''}${min2hm(state.minutes)}`;
   }
 
   el.time.addEventListener('input', () => {
@@ -346,7 +353,14 @@
     else if (state.data && state.data.stale) el.status.textContent = 'Dati in cache (EasyAcademy non raggiungibile)';
     else if (state.data && state.data.events.length === 0) el.status.textContent = 'Nessun evento in questa data';
     else el.status.textContent = '';
-    el.lastUpdate.textContent = state.data && state.data.lastUpdate ? `aggiornamento EasyAcademy: ${state.data.lastUpdate}` : '';
+    let rel = '';
+    if (state.fetchedAt) {
+      const s = Math.floor((Date.now() - state.fetchedAt) / 1000);
+      rel = s < 60 ? 'proprio ora' : s < 3600 ? `${Math.floor(s / 60)} min fa` : `${Math.floor(s / 3600)} h fa`;
+    }
+    el.lastUpdate.textContent = state.data
+      ? `aggiornato ${rel}${state.data.lastUpdate ? ` · EasyAcademy: ${state.data.lastUpdate}` : ''}`
+      : '';
   }
 
   function renderAll() {

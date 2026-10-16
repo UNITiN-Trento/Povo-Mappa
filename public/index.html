@@ -3,16 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Povo Mappa · Occupazione aule</title>
+  <meta name="theme-color" content="#171717" />
+  <title>Mappa Povo · Occupazione aule</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="logo">P</span>
+      <img class="logo" src="unitn-logo.png" alt="UniTrento" />
+      <span class="brand-sep" aria-hidden="true"></span>
       <div>
-        <h1>Povo Mappa</h1>
-        <p>Polo Ferrari · UniTrento · occupazione aule in tempo reale</p>
+        <h1>Mappa Povo</h1>
+        <p>Polo Ferrari · occupazione aule in tempo reale</p>
       </div>
     </div>
 
@@ -25,7 +27,7 @@
       </label>
       <label class="ctrl ctrl-time">
         <span>Ora <b id="time-label">--:--</b></span>
-        <input type="range" id="time-input" min="450" max="1410" step="15" />
+        <input type="range" id="time-input" min="450" max="1200" step="15" />
       </label>
       <button id="now-btn" class="btn live" title="Torna a adesso">● Adesso</button>
     </div>
@@ -50,7 +52,7 @@
 
     <aside class="side">
       <div class="side-head">
-        <input type="search" id="search" placeholder="Cerca aula (es. A105, B107)…" />
+        <input type="search" id="search" placeholder="🔍 Cerca aula (es. A105, B107)…" />
       </div>
       <div id="detail" class="detail hidden"></div>
       <ul id="room-list" class="room-list"></ul>
