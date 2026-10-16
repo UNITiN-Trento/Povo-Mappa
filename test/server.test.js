@@ -96,6 +96,11 @@ test('static file served with security headers + woff2 mime', async () => {
   assert.strictEqual(r.headers.get('x-content-type-options'), 'nosniff');
   assert.strictEqual(r.headers.get('x-frame-options'), 'DENY');
   assert.match(r.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.match(r.body, /<link rel="icon" type="image\/png" href="\/favicon\.png" \/>/);
+  const icon = await request('/favicon.png');
+  assert.strictEqual(icon.status, 200);
+  assert.strictEqual(icon.headers.get('content-type'), 'image/png');
+  assert.ok(Number(icon.headers.get('content-length')) > 0);
   const f = await request('/fonts/barlow-400.woff2');
   assert.strictEqual(f.status, 200);
   assert.strictEqual(f.headers.get('content-type'), 'font/woff2');
