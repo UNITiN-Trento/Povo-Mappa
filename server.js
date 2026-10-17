@@ -36,8 +36,8 @@ const MIME = {
 
 const SECURITY_HEADERS = {
   'Content-Security-Policy':
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data:; font-src 'self'; connect-src 'self'; " +
+    "default-src 'self'; script-src 'self' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data:; font-src 'self'; connect-src 'self' https://va.vercel-scripts.com; " +
     "base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'",
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
