@@ -1,7 +1,7 @@
 /* global FLOORS */
 (() => {
   const SOON_MIN = 30;
-  const REFRESH_MS = 5 * 60 * 1000;
+  const REFRESH_MS = 60 * 60 * 1000;
   const TZ = 'Europe/Rome';
 
   const $ = (sel) => document.querySelector(sel);

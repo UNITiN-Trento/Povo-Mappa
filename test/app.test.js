@@ -188,3 +188,84 @@ test('time controls toggle label and expanded state', async () => {
   assert.strictEqual(attributes.get('aria-expanded'), 'false');
   assert.strictEqual(topbar.classList.contains('show-controls'), false);
 });
+
+test('live map updates each minute while data refreshes hourly', async () => {
+  const els = new Map();
+  const getEl = (sel) => {
+    if (!els.has(sel)) els.set(sel, makeEl());
+    return els.get(sel);
+  };
+  const timers = new Map();
+  const requests = [];
+  let now = Date.UTC(2026, 3, 17, 8);
+  const Clock = class extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  };
+  const sandbox = {
+    FLOORS: [{
+      id: 'f1', building: 'B', name: 'P1', viewBox: '0 0 100 100',
+      outline: [], corridors: [], areas: [], texts: [], arrows: [],
+      rooms: [{ code: 'A101', label: 'A101', x: 0, y: 0, w: 100, h: 60 }],
+    }],
+    document: { querySelector: getEl, createElement: () => makeEl() },
+    window: { innerWidth: 1024, innerHeight: 768, matchMedia: () => ({ matches: false }) },
+    location: { search: '' },
+    Intl,
+    Date: Clock,
+    URLSearchParams,
+    setInterval: (fn, ms) => timers.set(ms, fn),
+    fetch: async (url) => {
+      requests.push(url);
+      return {
+        ok: true,
+        json: async () => ({
+          rooms: { A101: { name: 'A101', capacity: 40 } },
+          events: [{
+            room: 'A101', from: '10:01', to: '11:00', name: 'Lezione',
+            type: 'Lezione', teachers: [], cancelled: false,
+          }],
+        }),
+      };
+    },
+    console,
+  };
+  vm.createContext(sandbox);
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
+  vm.runInContext(src, sandbox, { filename: 'app.js' });
+  await new Promise((r) => setImmediate(r));
+
+  assert.strictEqual(requests.length, 1);
+  assert.match(getEl('#map').innerHTML, /class="room soon /);
+  assert.ok(timers.has(60 * 1000));
+  assert.ok(timers.has(60 * 60 * 1000));
+  assert.strictEqual(timers.size, 2);
+
+  now += 60 * 1000;
+  timers.get(60 * 1000)();
+  assert.strictEqual(requests.length, 1);
+  assert.match(getEl('#map').innerHTML, /class="room busy /);
+
+  timers.get(60 * 60 * 1000)();
+  await new Promise((r) => setImmediate(r));
+  assert.strictEqual(requests.length, 2);
+
+  getEl('#time-input')._listeners.input();
+  timers.get(60 * 60 * 1000)();
+  assert.strictEqual(requests.length, 2);
+
+  getEl('#date-input').value = '2026-04-16';
+  getEl('#date-input')._listeners.change();
+  await new Promise((r) => setImmediate(r));
+  assert.strictEqual(requests.length, 3);
+
+  getEl('#now-btn')._listeners.click();
+  await new Promise((r) => setImmediate(r));
+  assert.strictEqual(requests.length, 4);
+
+  now = Date.UTC(2026, 3, 17, 22);
+  timers.get(60 * 1000)();
+  await new Promise((r) => setImmediate(r));
+  assert.strictEqual(getEl('#date-input').value, '2026-04-18');
+  assert.strictEqual(requests.length, 5);
+});
