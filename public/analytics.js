@@ -2,16 +2,8 @@
 (function() {
   'use strict';
   
-  // Initialize the queue for analytics
-  if (!window.va) {
-    window.va = function va() {
-      var args = Array.prototype.slice.call(arguments);
-      if (!window.vaq) {
-        window.vaq = [];
-      }
-      window.vaq.push(args);
-    };
-  }
+  // Initialize the queue for analytics (official pattern from Vercel docs)
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   
   // Don't inject script in development (localhost)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
