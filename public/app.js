@@ -2,6 +2,7 @@
 (() => {
   const SOON_MIN = 30;
   const REFRESH_MS = 60 * 60 * 1000;
+  const MANUAL_TTL_MS = 30 * 60 * 1000;
   const TZ = 'Europe/Rome';
 
   const $ = (sel) => document.querySelector(sel);
@@ -34,11 +35,26 @@
     ctrlToggle.setAttribute('aria-expanded', String(open));
   });
 
+  const PALETTE_KEY = 'povo-palette';
+  const root = $('html');
+  const paletteBtn = $('#palette-btn');
+  function setPalette(cb) {
+    root.classList.toggle('cb', cb);
+    paletteBtn.setAttribute('aria-pressed', String(cb));
+    paletteBtn.title = cb ? 'Colori standard' : 'Colori per daltonici';
+    try { cb ? localStorage.setItem(PALETTE_KEY, 'cb') : localStorage.removeItem(PALETTE_KEY); } catch (e) { /* storage non disponibile */ }
+  }
+  let savedPalette = null;
+  try { savedPalette = localStorage.getItem(PALETTE_KEY); } catch (e) { /* storage non disponibile */ }
+  setPalette(savedPalette === 'cb');
+  paletteBtn.addEventListener('click', () => setPalette(!root.classList.contains('cb')));
+
   const state = {
     floorId: FLOORS[0].id,
     date: null,
     minutes: 0,
     live: true,
+    manualAt: null,
     data: null,
     loading: false,
     error: null,
@@ -331,16 +347,25 @@
     ctrlToggle.textContent = `🕒 ${d ? `${d}/${m} ` : ''}${min2hm(state.minutes)}`;
   }
 
+  function expireManual() {
+    if (!state.live && state.manualAt && Date.now() - state.manualAt > MANUAL_TTL_MS) {
+      setLive(true);
+      renderAll();
+      return true;
+    }
+    return false;
+  }
+
   el.time.addEventListener('input', () => {
     state.minutes = Number(el.time.value);
-    state.live = false; el.now.classList.remove('on');
+    state.live = false; state.manualAt = Date.now(); el.now.classList.remove('on');
     renderTime();
     renderAll();
   });
   el.date.addEventListener('change', () => {
     if (!el.date.value) return;
     state.date = el.date.value;
-    state.live = false; el.now.classList.remove('on');
+    state.live = false; state.manualAt = Date.now(); el.now.classList.remove('on');
     state.data = null;
     renderTime();
     load(state.date);
@@ -378,6 +403,7 @@
   if (/^\d{4}-\d{2}-\d{2}$/.test(params.get('date') || '') || /^\d{1,2}:\d{2}$/.test(params.get('time') || '')) {
     const n = romeNow();
     state.live = false;
+    state.manualAt = Date.now();
     state.date = params.get('date') || n.date;
     state.minutes = params.get('time') ? hm2min(params.get('time')) : n.minutes;
     el.date.value = state.date;
@@ -389,7 +415,7 @@
   renderAll();
 
   setInterval(() => {
-    if (!state.live) return;
+    if (!state.live) { expireManual(); return; }
     const n = romeNow();
     const dateChanged = n.date !== state.date;
     state.date = n.date; state.minutes = n.minutes; el.date.value = n.date;
@@ -398,4 +424,8 @@
   }, 60 * 1000);
 
   setInterval(() => { if (state.live && state.date) load(state.date); }, REFRESH_MS);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') expireManual();
+  });
 })();
